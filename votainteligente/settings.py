@@ -12,6 +12,8 @@ TEMPLATE_DEBUG = DEBUG
 ADMINS = (
     # ('Your Name', 'your_email@example.com'),
 )
+#ADD server EMAil
+#SERVER_EMAIL = 'info@nouabook.ma'
 
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 
@@ -37,11 +39,11 @@ ALLOWED_HOSTS = []
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
 # although not all choices may be available on all operating systems.
 # In a Windows environment this must be set to your system time zone.
-TIME_ZONE = 'America/Chicago'
+TIME_ZONE = 'Africa/Casablanca'
 
 # Language code for this installation. All choices can be found here:
 # http://www.i18nguy.com/unicode/language-identifiers.html
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'ar' #'fr-fr'
 
 SITE_ID = 1
 
@@ -56,9 +58,25 @@ USE_L10N = True
 # If you set this to False, Django will not use timezone-aware datetimes.
 USE_TZ = True
 
+#for I18N et L10N
+gettext_noop = lambda x: x
+
+LANGUAGES = (
+    ('fr', gettext_noop('French')),
+    ('ar', gettext_noop('Arabic')),
+)
+
+LOCALE = (
+    '/home/simsim/www/votainteligente-portal-electoral/locale/',
+)
+
+LOCALE_PATHS = (os.path.join(os.path.dirname(__file__), '../locale/'),)
+
 # Absolute filesystem path to the directory that will hold user-uploaded files.
-# Example: "/var/www/example.com/media/"
-MEDIA_ROOT = os.path.join(PROJECT_ROOT, '..' ,'cache')
+# Example: "/var/www/example.com/media/" old : 
+#the value of media_root is temporaly 
+# a solution like upload in CDN as amazon bucket should be implemented.
+MEDIA_ROOT = os.path.join(PROJECT_ROOT, 'cache')
 
 
 # URL that handles the media served from MEDIA_ROOT. Make sure to use a
@@ -103,13 +121,17 @@ TEMPLATE_LOADERS = (
 )
 
 MIDDLEWARE_CLASSES = (
-    'django.middleware.common.CommonMiddleware',
+    'elections.middleware.ForceDefaultLanguageMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.locale.LocaleMiddleware',
+    'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-    'django.contrib.flatpages.middleware.FlatpageFallbackMiddleware',
+    #'django.contrib.flatpages.middleware.FlatpageFallbackMiddleware',
+    'flatpages_i18n.middleware.FlatpageFallbackMiddleware',
     'pagination.middleware.PaginationMiddleware',
+    'secretballot.middleware.SecretBallotIpMiddleware',
     # Uncomment the next line for simple clickjacking protection:
     # 'django.middleware.clickjacking.XFrameOptionsMiddleware',
 )
@@ -132,7 +154,9 @@ TEMPLATE_CONTEXT_PROCESSORS = (
     "django.core.context_processors.static",
     "django.core.context_processors.tz",
     "django.core.context_processors.request",
-    "django.contrib.messages.context_processors.messages"
+    "django.contrib.messages.context_processors.messages",
+    "votainteligente.context_processors.get_url_base",
+    "votainteligente.context_processors.word_i18n",
     )
 
 TESTING = 'test' in sys.argv
@@ -143,7 +167,7 @@ INSTALLED_APPS = (
     'django.contrib.sites',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django.contrib.flatpages',
+    #'django.contrib.flatpages',
     'django_nose',
     'django.contrib.sitemaps',
     'south',
@@ -161,7 +185,13 @@ INSTALLED_APPS = (
     # Uncomment the next line to enable the admin:
     'django.contrib.admin',
     'tinymce',
-    'djcelery'
+    'djcelery',
+    'secretballot',
+    'mptt',
+    'modeltranslation',
+    'flatpages_i18n',
+    'multiupload',
+    'extra_views',
     # Uncomment the next line to enable admin documentation:
     # 'django.contrib.admindocs',
 )
@@ -243,6 +273,8 @@ TINYMCE_DEFAULT_CONFIG = {
     'theme': "advanced",
     'cleanup_on_startup': True,
     'custom_undo_redo_levels': 10,
+    'width': 500,
+    'height': 500,
 }
 #Django nose
 TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
@@ -279,8 +311,8 @@ WEBSITE_METADATA = {
 WEBSITE_OGP = {
     'title' : u'Title page for Facebook OGP',
     'type' : 'website',
-    'url' : 'http://www.mi-domain.org/',
-    'image' : 'img/votai-196.png'
+    'url' : 'http://nouabook.ma/',
+    'image' : 'img/logo1.png'
 }
 #disqus setting dev
 WEBSITE_DISQUS = {
@@ -305,6 +337,12 @@ WEBSITE_GENERAL_SETTINGS = {
 #twitter sepparated by comma, eg: votainteligente,votainformado,othertag
 WEBSITE_TWITTER = {
     'hashtags' : 'votainteligente'
+}
+#setting facebook website
+WEBSITE_FACEBOOK = {
+    'app_id' : 'the_app_id',
+    'secret_key' : 'the_secret_key',
+    'version' : 'v2.1'
 }
 USE_POPIT = True
 #if you set USE_POPIT to False the USE_WRITEIT param will automatically be interpreted as False

@@ -9,9 +9,9 @@ class Migration(SchemaMigration):
 
     def forwards(self, orm):
         # Removing unique constraint on 'Election', fields ['popit_api_instance']
-
-        db.execute(u"ALTER TABLE elections_election DROP INDEX popit_api_instance_id;", params=[])
-        db.execute(u"ALTER TABLE elections_election DROP INDEX writeitinstance_id;", params=[])
+        pass
+        #db.execute(u"ALTER TABLE elections_election DROP INDEX popit_api_instance_id;", params=[])
+        #db.execute(u"ALTER TABLE elections_election DROP INDEX writeitinstance_id;", params=[])
 
     def backwards(self, orm):
 
