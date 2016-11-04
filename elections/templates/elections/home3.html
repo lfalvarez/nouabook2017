@@ -1,0 +1,431 @@
+{% extends "base.html" %}
+{% load staticfiles %}
+{% load i18n %}
+{% load thumbnail %}
+{% load votainteligente_extras %}
+{% load filename %}
+
+{% block title%}{% trans "Parlement Marocain: posez vos questions aux députés | Nouabook.ma" %}{% endblock title %}
+
+{% block othercss %}
+	<style>
+		a.html5lightboxes img {display: block; margin-left: auto;margin-right: auto; margin-top: 2.5%; width: 45%}
+		#html5-text{direction: rtl; font-weight:bold; text-align: center;}
+		h3.article-title a {color: #3a4d50;} h3.article-title a:hover{color:#e66d27;}
+	</style>
+{% endblock othercss %}
+
+{% block pack_lang %} 
+  {% include "elections/langage_html.html" with redirect_to="/" %}
+{% endblock pack_lang %}
+
+{% block content %}
+
+	<div id="hero">
+		<h1>{% trans "Communiquez en ligne avec vos député-es" %}</h1>
+		<h2>{% trans "Adressez vos questions à vos député-es et recevez leurs réponses sur Nouabook.ma" %}</h2>
+		<div id="features">
+			<ul>
+				<li class="feature-1">
+					<a href="{% url 'depute_view' %}"><span>{% trans "Trouvez vos député-es" %}</span></a>
+				</li>
+				<li class="feature-2">
+					<a href="{% url 'posez_view' %}"><span>{% trans "Posez votre question" %}</span></a>
+				</li>
+				<li class="feature-3">
+					<a href="{% url 'question_view' %}"><span>{% trans "Votez pour une question" %}</span></a>
+				</li>
+			</ul>
+		</div>
+	</div>
+	<div id="mps">
+		<div class="new-replies">
+			{% if writeitmessages %}
+                <a href="{% url 'question_view' %}"><h2>{% trans "Nouvelles réponses" %}</h2></a>
+			{% for message in writeitmessages|slice:":2" %}
+			{% with answer=message.answers.all|first %}
+			<div class="reply">
+				{% with candidate=answer.person.relation.candidate %}
+				<div class="profile-picture-wrapper">
+					{% if candidate.photo %}
+                        <a href="{% url 'profil_view' candidate.slug %}">
+                            <img src="{{candidate.photo}}" alt="{{answer.person.name}}" class="profile-picture medium">
+                        </a>
+                        {% comment %}{% thumbnail candidate.photo "300x300" crop="center" as im %}
+                            <a href="{% url 'profil_view' candidate.slug %}"><img src="{{im.url}}" alt="{{answer.person.name}}" class="profile-picture medium" /></a>
+                        {% endthumbnail %}{% endcomment %}
+					{% else %}
+					<a href="{% url 'profil_view' candidate.slug %}"><img src="/static/img/default-profile-picture.png" alt="depute" class="profile-picture medium" /></a>
+					{% endif %}
+				</div>
+				<div class="entry">
+                    <h3><a style="font-size:1em" href="{% url 'profil_view' candidate.slug %}">{% get_name_candidate candidate LANGUAGE_CODE %}</a></h3>
+                    <p class="quote" dir="auto">
+                        {% filter linebreaksbr %}
+                            {% display_content_type answer.content|truncatewords:40 'answer' '300' '150' %}
+                        {% endfilter %}
+                    </p>
+					<a href="{% url 'message_view' message.id '-reponse' %}" class="more">{% trans "Lire la suite" %}<i class="fa fa-play"></i></a>
+				</div>
+				{% endwith %}
+			</div>
+			{% endwith %}
+			{% endfor %}		
+			{% endif %}
+		</div>
+        <div class="widget mps-widget">
+            <h2><a href="{% url 'citizen_timeline_view' %}">{% trans "Dernières publications des député-es" %}</a></h2>
+            <div class="owl-carousel">
+                <div class="slide">
+                {% for status in status_updates %}
+                    <div class="mp">
+                        <div class="profile-picture-wrapper active">
+                            {% if status.candidate.photo %}
+                                <a href="{% url 'profil_view' status.candidate.slug %}">
+                                    <img src="{{status.candidate.photo}}" alt="{{status.candidate.name}}" class="profile-picture medium">
+                                </a>
+                                {% comment %}{% thumbnail status.candidate.photo "300x300" crop="center" as im %}
+                                    <a href="{% url 'profil_view' status.candidate.slug %}"><img src="{{im.url}}" alt="{{status.candidate.name}}" class="profile-picture medium"></a>
+                                {% endthumbnail %}{% endcomment %}
+                            {% else %}
+                                <a href="{% url 'profil_view' status.candidate.slug %}"><img src="/static/img/default-profile-picture.png" alt="{{status.candidate.name}}" class="profile-picture medium"></a>
+                            {% endif %}
+                        </div>
+                        <div class="bio compact">
+                            <a href="{% url 'profil_view' status.candidate.slug %}">
+                        	    <h3>{% get_name_candidate status.candidate LANGUAGE_CODE %}</h3>
+                            </a>
+                            <p class="status-update">
+                                <span class="date">{% trans "Publié le" %} {{ status.created|date:"SHORT_DATE_FORMAT" }}</span>
+                                {% if status.urlVideo %}
+                                    {%  display_content_type status.urlVideo 'question' '300' '150' %}
+                                {% else %}
+                                    {{ status.text|linebreaksbr|truncatewords:25 }}
+                                {% endif %}
+                                 <a href="{% url 'questions_status_view' status.id %}" class="more">{% trans "Lire la suite" %}<i class="fa fa-play"></i></a>
+                            </p>
+                        </div>
+                    </div>
+                    {% if forloop.counter|divisibleby:"2" and forloop.last != True %}
+                </div>
+                    <div class="slide">
+					{% endif %}
+                {% endfor %}
+                    </div>
+            </div>
+        </div>
+	</div>
+	
+	<div class="tabs" id="questions">
+		<div class="outer-wrapper">
+			<div class="inner-wrapper">
+				<h2>{% trans "Vos questions" %}</h2>
+				<nav class="tab-controls">
+					<ul>
+						<li class="active"><a href="#recent" title="{% trans 'Consultez les questions qui ont récemment été publiées!' %}">{% trans "Récentes" %}</a> / </li>
+						<li><a href="#qa" title="{% trans 'Consultez les questions qui ont reçu des réponses!' %}">{% trans "Questions - réponses" %}</a> / </li>						
+						<li><a href="#popular" title="{% trans 'Consultez les questions les plus populaires sur le site!' %}">{% trans "Les plus votées" %}</a></li>
+					</ul>
+				</nav>
+				<div class="tab" id="recent">
+				{% if questions %}
+				{% for message in questions %}
+					<div class="thread" id="thread_Q_{{ message.id }}">
+						<div class="question message">
+							<div class="date">
+							{% if message.moderated_at %}
+							{{ message.moderated_at|date:"SHORT_DATE_FORMAT" }}
+							{% else %}
+							{{ message.created|date:"SHORT_DATE_FORMAT" }}
+							{% endif %}
+							</div>
+							<div class="entry">
+								<div class="profile-picture-wrapper"><img src="/static/img/default-profile-picture.png" alt="" class="profile-picture medium"></div>
+								<div class="entry-inner">
+									<h3>{{message.author_name}}<div class="meta">{{message.author_ville}}</div></h3>
+									<p dir="auto">
+										{% filter linebreaksbr %}
+											{% display_content_type message.content 'question' %}
+										{% endfilter %}
+									</p>
+	                                {% for tag in message.tags.all %}
+				                        <div class="tags">
+				                            <span>#{% trans tag.name %}</span>
+				                        </div>
+				                    {% endfor %}
+				                </div>
+							</div>
+							<div class="actions">
+								{% with dept=message.people.all|first %}
+								{% with phrase=question_a|add:dept.name|add:sur%}
+								<ul>
+									<li class="like"><span id="count_Q_{{ message.id }}" class="counter">{{ message.total_upvotes }}</span><a href="#" id="P2voter_{{ message.id }}" class="voter">{% trans "Liker cette question" %}</a></li>
+									<li class="share">
+                                        <a href="">{% trans "Partager" %}</a>
+                                        <ul>
+											<li class="twitter"><a href="https://twitter.com/intent/tweet?url={{url_base|urlencode}}{% url 'message_view' message.id %}&amp;text={{phrase|iriencode}}{{message.subject|truncatechars:90|iriencode}}&amp;via=nouabook&amp;related=nouabook&amp;lang={{LANGUAGE_CODE}}" target="_blank">{% trans "Partager sur Twitter" %}</a></li>
+											<li class="facebook"><a href="http://www.facebook.com/sharer.php?s=100&p[url]={{url_base|urlencode}}{% url 'message_view' message.id %}&p[title]={{phrase|iriencode}}{{message.subject|iriencode}}&p[summary]={{message.content|truncatewords:300|iriencode}}" target="_blank">{% trans "Partager sur Facebook" %}</a></li>
+											<li class="email"><a href="mailto:?subject={{phrase|iriencode}}{{message.subject|truncatechars:30|iriencode}}&amp;body={{message.content|truncatewords:200|iriencode}}...%0D%0A{{url_base|urlencode}}{% url 'message_view' message.id %}" target="_top">{% trans "Partager par email" %}</a></li>
+										</ul>
+									</li>
+								</ul>
+								{% endwith %}
+								{% endwith %}
+							</div>
+						</div>
+						<p class="notice">{% trans "Cette question n'a pas encore reçu de réponse" %}</p>
+						<div class="answer message inactive">
+							<div class="entry">
+							{% with person=message.people.all|first %}
+							{% with candidate=person.relation.candidate %}
+							<div class="profile-picture-wrapper">
+								{% if candidate.photo %}
+                                    <a href="{% url 'profil_view' candidate.slug %}">
+                                        <img src="{{candidate.photo}}" alt="{{answer.person.name}}" class="profile-picture medium">
+                                    </a>
+								{% comment %}{% thumbnail candidate.photo "300x300" crop="center" as im %}
+								<a href="{% url 'profil_view' candidate.slug %}"><img src="{{im.url}}" alt="{{answer.person.name}}" class="profile-picture medium"></a>
+								{% endthumbnail %}{% endcomment %}
+								{% else %}
+								<a href="{% url 'profil_view' candidate.slug %}"><img src="/static/img/default-profile-picture.png" alt="{{answer.person.name}}" class="profile-picture medium"></a>
+								{% endif %}
+							</div>
+							<div class="entry-inner">
+								<h3>{% get_name_candidate candidate LANGUAGE_CODE %}</h3>
+							</div>
+							{% endwith %}
+							{% endwith %}
+							</div>
+						</div>
+					</div>
+				{% endfor %}
+				{% endif %}
+				</div>
+				<div class="tab" id="qa">
+				{% if writeitmessages %}
+				{% for message in writeitmessages %}
+					<div class="thread" id="thread_QR_{{ message.id }}">
+						<div class="question message">
+							<div class="date">
+							{% if message.moderated_at %}
+							{{ message.moderated_at|date:"SHORT_DATE_FORMAT" }}
+							{% else %}
+							{{ message.created|date:"SHORT_DATE_FORMAT" }}
+							{% endif %}
+							</div>
+							<div class="entry">
+								<div class="profile-picture-wrapper"><img src="/static/img/default-profile-picture.png" alt="" class="profile-picture medium"></div>
+								<div class="entry-inner">
+									<h3>{{message.author_name}}<div class="meta">{{message.author_ville}}</div></h3>
+									<p dir="auto">
+										{% filter linebreaksbr %}
+											{% display_content_type message.content 'question' %}
+										{% endfilter %}
+									</p>
+	                                {% for tag in message.tags.all %}
+	                                    <div class="tags">
+	                                        <span>#{% trans tag.name %}</span>
+	                                    </div>
+	                                {% endfor %}
+	                            </div>
+							</div>
+							<div class="actions">
+								{% with dept=message.people.all|first %}
+								{% with phrase=question_a|add:dept.name|add:sur %}
+								<ul>
+									<li class="like"><span id="count_QR_{{ message.id }}" class="counter">{{ message.total_upvotes }}</span><a href="#" id="P1voter_{{ message.id }}" class="voter">{% trans "Liker cette question" %}</a></li>
+									<li class="share">
+                                        <a href="">{% trans "Partager" %}</a>
+                                        <ul>
+											<li class="twitter"><a href="https://twitter.com/intent/tweet?url={{url_base|urlencode}}{% url 'message_view' message.id %}&amp;text={{phrase|iriencode}}{{message.subject|truncatechars:90|iriencode}}&amp;via=nouabook&amp;related=nouabook&amp;lang={{LANGUAGE_CODE}}" target="_blank">{% trans "Partager sur Twitter" %}</a></li>
+											<li class="facebook"><a href="http://www.facebook.com/sharer.php?s=100&p[url]={{url_base|urlencode}}{% url 'message_view' message.id %}&p[title]={{phrase|iriencode}}{{message.subject|iriencode}}&p[summary]={{message.content|truncatewords:300|iriencode}}" target="_blank">{% trans "Partager sur Facebook" %}</a></li>
+											<li class="email"><a href="mailto:?subject={{phrase|iriencode}}{{message.subject|truncatechars:30|iriencode}}&amp;body={{message.content|truncatewords:200|iriencode}}...%0D%0A{{url_base|urlencode}}{% url 'message_view' message.id %}" target="_top">{% trans "Partager par email" %}</a></li>
+										</ul>
+									</li>
+								</ul>
+								{% endwith %}
+								{% endwith %}
+							</div>
+						</div>
+						{% with answer=message.answers.all|first %}
+						<div class="answer message">
+							<div class="date">{{ answer.created|date:"SHORT_DATE_FORMAT" }}</div>
+							<div class="entry">
+							    {% with candidate=answer.person.relation.candidate %}
+								<div class="profile-picture-wrapper">
+									{% if candidate.photo %}
+                                        <a href="{% url 'profil_view' candidate.slug %}">
+                                            <img src="{{candidate.photo}}" alt="{{answer.person.name}}" class="profile-picture medium">
+                                        </a>
+									{% comment %}{% thumbnail candidate.photo "300x300" crop="center" as im %}
+									<a href="{% url 'profil_view' candidate.slug %}"><img src="{{im.url}}" alt="{{answer.person.name}}" class="profile-picture medium"></a>
+									{% endthumbnail %}{% endcomment %}
+									{% else %}
+									    <a href="{% url 'profil_view' candidate.slug %}"><img src="/static/img/default-profile-picture.png" alt="{{answer.person.name}}" class="profile-picture medium"></a>
+									{% endif %}
+								</div>
+								<div class="entry-inner">
+									<h3>{% get_name_candidate candidate LANGUAGE_CODE %}</h3>
+								    {% endwith %}
+									<p dir="auto">
+										{% filter linebreaksbr %}
+											{% display_content_type answer.content 'reponse' %}
+										{% endfilter %}
+									</p>
+	                                <ul class="attachments">
+	                                    {% for attachment in answerAttachments %}
+	                                        {% if attachment.messageId  ==  answer.message.id %}
+                                                <li>
+                                                    <a href="/cache/attachments/{{ attachment.file|filename }}" target="_blank"><i class="fa fa-paperclip"></i> {{ attachment.file|filename }}</a>
+                                                </li>	                                            
+	                                        {% endif %}
+	                                    {% endfor %}
+	                                </ul>
+	                            </div>
+							</div>
+							<div class="actions">
+								{% with phrase=reponse_par|add:answer.person.name|add:sur %}
+								<ul>
+									<li class="like"><span class="counter" id="Rcount_QR_{{ answer.id }}">{{ answer.total_upvotes }}</span><a href="#" id="RP1voter_{{ answer.id }}" class="rvoter">{% trans "Liker cette réponse" %}</a></li>
+									<li class="share">
+                                        <a href="">{% trans "Partager" %}</a>
+                                        <ul>
+											<li class="twitter"><a href="https://twitter.com/intent/tweet?url={{url_base|urlencode}}{% url 'message_view' message.id '-reponse' %}&amp;text={{phrase|iriencode}}{{message.subject|truncatechars:90|iriencode}}&amp;via=nouabook&amp;related=nouabook&amp;lang={{LANGUAGE_CODE}}" target="_blank">{% trans "Partager sur Twitter" %}</a></li>
+											<li class="facebook"><a href="http://www.facebook.com/sharer.php?s=100&p[url]={{url_base|urlencode}}{% url 'message_view' message.id '-reponse' %}&p[title]={{phrase|iriencode}}{{message.subject|iriencode}}&p[summary]={{answer.content|truncatewords:300|iriencode}}" target="_blank">{% trans "Partager sur Facebook" %}</a></li>
+											<li class="email"><a href="mailto:?subject={{phrase|iriencode}}{{message.subject|truncatechars:30|iriencode}}&amp;body={{answer.content|truncatewords:200|iriencode}}...%0D%0A{{url_base|urlencode}}{% url 'message_view' message.id '-reponse'%}" target="_top">{% trans "Partager par email" %}</a></li>
+										</ul>
+									</li>
+								</ul>
+								{% endwith %}
+							</div>
+						</div>
+						{% endwith %}
+					</div>
+				{% endfor %}
+				{% endif %}					
+				</div>
+				
+				<div class="tab" id="popular">
+				{% if top_vote %}
+				{% for message in top_vote %}
+					<div class="thread" id="thread_TV_{{ message.id }}">
+						<div class="question message">
+							<div class="date">
+							{% if message.moderated_at %}
+							{{ message.moderated_at|date:"SHORT_DATE_FORMAT" }}
+							{% else %}
+							{{ message.created|date:"SHORT_DATE_FORMAT" }}
+							{% endif %}
+							</div>
+							<div class="entry">
+								<div class="profile-picture-wrapper"><img src="/static/img/default-profile-picture.png" alt="" class="profile-picture medium"></div>
+								<div class="entry-inner">
+									<h3>{{message.author_name}}<div class="meta">{{message.author_ville}}</div></h3>
+									<p dir="auto">
+										{% filter linebreaksbr %}
+											{% display_content_type message.content 'question' %}
+										{% endfilter %}
+									</p>
+									{% for tag in message.tags.all %}
+	                                    <div class="tags">
+	                                        <span>#{% trans tag.name %}</span>
+	                                    </div>
+	                                {% endfor %}
+	                            </div>
+							</div>
+							<div class="actions">
+								{% with dept=message.people.all|first %}
+								{% with phrase=question_a|add:dept.name|add:sur %}
+								<ul>
+									<li class="like"><span id="count_TV_{{ message.id }}" class="counter">{{ message.total_upvotes }}</span><a href="#" id="P3voter_{{ message.id }}" class="voter">{% trans "Liker cette question" %}</a></li>
+									<li class="share">
+                                        <a href="">{% trans "Partager" %}</a>
+                                        <ul>
+											<li class="twitter"><a href="https://twitter.com/intent/tweet?url={{url_base|urlencode}}{% url 'message_view' message.id %}&amp;text={{phrase|iriencode}}{{message.subject|truncatechars:90|iriencode}}&amp;via=nouabook&amp;related=nouabook&amp;lang={{LANGUAGE_CODE}}" target="_blank">{% trans "Partager sur Twitter" %}</a></li>
+											<li class="facebook"><a href="http://www.facebook.com/sharer.php?s=100&p[url]={{url_base|urlencode}}{% url 'message_view' message.id %}&p[title]={{phrase|iriencode}}{{message.subject|iriencode}}&p[summary]={{message.content|truncatewords:300|iriencode}}" target="_blank">{% trans "Partager sur Facebook" %}</a></li>
+											<li class="email"><a href="mailto:?subject={{phrase|iriencode}}{{message.subject|truncatechars:30|iriencode}}&amp;body={{message.content|truncatewords:200|iriencode}}...%0D%0A{{url_base|urlencode}}{% url 'message_view' message.id %}" target="_top">{% trans "Partager par email" %}</a></li>
+										</ul>
+									</li>
+								</ul>
+								{% endwith %}
+								{% endwith %}
+							</div>
+						</div>
+						<p class="notice">{% trans "Cette question n'a pas encore reçu de réponse" %}</p>
+						<div class="answer message inactive">
+							<div class="entry">
+							{% with person=message.people.all|first %}
+							{% with candidate=person.relation.candidate %}
+							<div class="profile-picture-wrapper">
+								{% if candidate.photo %}
+                                    <a href="{% url 'profil_view' candidate.slug %}">
+                                        <img src="{{candidate.photo}}" alt="{{answer.person.name}}" class="profile-picture medium">
+                                    </a>
+                                    {% comment %}{% thumbnail candidate.photo "300x300" crop="center" as im %}
+                                        <a href="{% url 'profil_view' candidate.slug %}"><img src="{{im.url}}" alt="{{answer.person.name}}" class="profile-picture medium"></a>
+                                    {% endthumbnail %}{% endcomment %}
+								{% else %}
+								    <a href="{% url 'profil_view' candidate.slug %}"><img src="/static/img/default-profile-picture.png" alt="{{answer.person.name}}" class="profile-picture medium"></a>
+								{% endif %}
+							</div>
+							<div class="entry-inner">
+								<h3>{% get_name_candidate candidate LANGUAGE_CODE %}</h3>
+							</div>
+							{% endwith %}
+							{% endwith %}
+							</div>
+						</div>
+					</div>
+				{% endfor %}
+				{% endif %}
+				</div>
+                <div style="text-align: center">
+                    <a href="{% url 'question_view' %}" class="button" style="background-image: linear-gradient(#99b2b7,#3a4d50); background-image: webkit-linear-gradient(#99b2b7,#3a4d50)">{% trans 'Lire toutes les Questions' %}</a>
+                </div>
+			</div>
+		</div>
+	</div>
+    
+    <div id="blog"></div>
+
+{% endblock content %}
+
+{% block otherjs %}
+<script>
+	jQuery(function($){
+		$('a.voter').on('click', function(evt){ evt.preventDefault();
+			question_voter($(this),'{% url "votedirect" %}');						
+		});
+				
+		$('a.rvoter').on('click', function(evt){ evt.preventDefault();
+			answer_voter($(this),'{% url "votedirect" %}');
+		});
+		
+	});
+
+	//from blog API
+	$.get('{% url "blog_ajax" %}', function(data){
+		var html_content = "<div class='articles'><h2><a href='http://blog.nouabook.ma'>{% trans 'En direct du blog' %}</a></h2>";
+		var regex = /<img[^>]*>/g, result;
+		var regexIframe = /<iframe[^>]*>/g;
+
+		$.each(data.posts, function(i, post){
+			 html_content += '<article class="article"><h3 class="article-title" dir="auto"><a href="' + post['post_url'] + '">' + post['title'] + '</a></h3>';
+		        html_content+= '<div class="article-entry"><div class="article-picture">';
+		        //image
+		        if(post['body'].match(regex)) {
+		            html_content += '<img width="350" height="150" src="' + $(post['body']).find('img:first').attr('src') + '"/>';
+		        }//video youtube
+		        else if(result = post['body'].match(regexIframe)) { 
+		        	/src="([^"]+)"/.exec(result[0]);
+		            html_content += '<iframe width="300" height="150" src="' + RegExp.$1 + '" frameborder="0"></iframe>';
+		        }
+		        html_content+='</div></div></article>';
+
+		});
+
+		html_content += '</div>';
+		$('#blog').html(html_content);
+	});
+</script>
+{% endblock otherjs %}
