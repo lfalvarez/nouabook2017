@@ -249,7 +249,7 @@ class VotaInteligenteAnswer(models.Model):
     def save(self, *args, **kwargs):
         if not self.id:
             self.created = datetime.datetime.today()
-        candidate = CandidatePerson.objects.get(id=self.person.id)
+        candidate = self.person.relation
 
         totalQuestionsAnswred = candidate.person.answers.count()
         if totalQuestionsAnswred < 5:

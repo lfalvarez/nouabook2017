@@ -238,8 +238,10 @@ class ProfilDetailView(DetailView):
                                                                            moderated=True).prefetch_related(
             'answers').order_by('-moderated_at')
         lg = translation.get_language()
-
-        le_parti = BackgroundCandidate.objects.get(background_id= 1, candidate_id= self.object.relation.person.id).value
+        if not BackgroundCandidate.objects.filter(background_id= 1, candidate_id= self.object.relation.person.id).exists():
+            le_parti = ""
+        else:
+            le_parti = BackgroundCandidate.objects.get(background_id= 1, candidate_id= self.object.relation.person.id).value
         context['banniere'] = le_parti[le_parti.find('(')+1:len(le_parti)-1].lower()
         if lg == 'fr':
             context['background_categories'] = l_election.can_election.backgroundcategory_set.filter(
